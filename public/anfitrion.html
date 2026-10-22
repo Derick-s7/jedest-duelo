@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Duelo de ticket · Anfitrión</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ===== SISTEMA DE COLOR =====
+   Violeta  = la interfaz, los títulos, lo correcto
+   Azul/Rojo = únicamente los dos técnicos que compiten
+   Dorado   = únicamente el boleto de la rifa                      */
+:root{
+  --bg:#080a1a;--bg2:#0d1130;--tx:#f0f1ff;--mut:#8b93c4;
+  --line:rgba(140,130,255,.16);--panel:rgba(124,108,255,.045);
+  --acc:#8b7cff;--acc2:#5a4fd4;--accl:#b9b2ff;
+  --p1:#5672b8;--p2:#b0545f;--gold:#f5c451}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:radial-gradient(1100px 680px at 10% -14%,rgba(139,124,255,.26),transparent 62%),radial-gradient(900px 600px at 112% 118%,rgba(90,79,212,.18),transparent 62%),var(--bg);color:var(--tx);font-family:"Space Mono",ui-monospace,monospace;overflow:hidden;padding:14px 20px;display:flex;flex-direction:column}
+#net{position:fixed;inset:0;z-index:0;pointer-events:none}
+#hConf,#fConf{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
+#hConf{z-index:60}#fConf{z-index:45}
+.oculto{display:none!important}
+.wrap{position:relative;z-index:2;flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:1400px;margin:0 auto}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:12px}
+/* ===== MARCA EN TIPOGRAFÍA NORMAL ===== */
+.marca{position:relative;display:flex;align-items:center;gap:13px;padding-bottom:8px}
+.marca::after{content:"";position:absolute;left:0;bottom:0;height:2px;width:100%;border-radius:2px;
+  background:linear-gradient(90deg,transparent,var(--acc) 35%,#fff 50%,var(--acc) 65%,transparent);
+  background-size:220% 100%;animation:marcaLinea 5s linear infinite}
+@keyframes marcaLinea{to{background-position:-220% 0}}
+.marca-j{font:400 42px "Bebas Neue",Impact,sans-serif;letter-spacing:.14em;line-height:.8;
+  background:linear-gradient(100deg,#fff 20%,var(--acc) 42%,#fff 64%);background-size:220% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:marcaBrillo 6s linear infinite;filter:drop-shadow(0 0 16px rgba(139,124,255,.4))}
+@keyframes marcaBrillo{to{background-position:-220% 0}}
+.marca-x{font:400 26px "Bebas Neue",Impact,sans-serif;line-height:.8;color:var(--acc);
+  text-shadow:0 0 16px rgba(139,124,255,.9);animation:marcaX 3.4s ease-in-out infinite}
+@keyframes marcaX{0%,100%{transform:rotate(0) scale(1);opacity:.8}50%{transform:rotate(90deg) scale(1.22);opacity:1}}
+.marca-i{font:700 24px -apple-system,"Segoe UI",Helvetica,Arial,sans-serif;letter-spacing:-.4px;
+  line-height:.8;color:var(--tx);text-shadow:0 0 18px rgba(255,255,255,.25)}
+.estado{font-size:11px;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--accl);padding:7px 12px;border-radius:999px;color:var(--accl)}
+/* ===== TÍTULOS: un solo color, violeta, con resplandor ===== */
+.glitch{position:relative;display:inline-block;font-family:"Bebas Neue",Impact,sans-serif;font-weight:400;text-transform:uppercase;line-height:.92;color:var(--acc);text-shadow:0 0 26px rgba(139,124,255,.5)}
+.glitch::before,.glitch::after{content:attr(data-t);position:absolute;left:0;top:0;width:100%;overflow:hidden;pointer-events:none;color:var(--acc)}
+.glitch::before{transform:translate(-3px,0);clip-path:polygon(0 0,100% 0,100% 40%,0 40%);animation:gl1 2.8s infinite steps(2);opacity:.6}
+.glitch::after{transform:translate(3px,0);clip-path:polygon(0 60%,100% 60%,100% 100%,0 100%);animation:gl2 2.8s infinite steps(2);opacity:.6}
+@keyframes gl1{0%,88%,100%{transform:translate(0)}89%{transform:translate(-5px,0)}93%{transform:translate(4px,0)}}
+@keyframes gl2{0%,88%,100%{transform:translate(0)}89%{transform:translate(5px,0)}94%{transform:translate(-3px,0)}}
+.h{font:400 38px "Bebas Neue",Impact,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:var(--acc);margin:0 0 8px;text-shadow:0 0 22px rgba(139,124,255,.45)}
+.eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--accl)}
+.muted{color:var(--mut)}
+/* Tarjetas con un filo de luz que recorre el borde */
+.card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}
+.card::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;
+  background:linear-gradient(115deg,transparent 38%,rgba(139,124,255,.9) 50%,transparent 62%);background-size:300% 100%;
+  animation:borde 6s linear infinite;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+@keyframes borde{from{background-position:160% 0}to{background-position:-160% 0}}
+/* ===== BOTONES ===== */
+.btn{position:relative;overflow:hidden;border:0;border-radius:12px;padding:14px 26px;font:400 24px "Bebas Neue",Impact,sans-serif;letter-spacing:.08em;color:#fff;cursor:pointer;text-transform:uppercase;margin-top:14px;
+  background:linear-gradient(100deg,var(--acc2),var(--acc),var(--acc2));background-size:220% 100%;
+  animation:fondo 5s linear infinite,halo 2.6s ease-in-out infinite;transition:transform .15s}
+.btn::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-20deg);animation:brillo 2.9s infinite;pointer-events:none}
+.btn:hover{transform:translateY(-2px)}
+.btn:active{transform:scale(.98)}
+.btn.sec{background:transparent;border:1px solid var(--accl);color:var(--accl);animation:none;box-shadow:none}
+.btn.sec::after{display:none}
+.btn:disabled{background:#1d2342;color:#6a7299;animation:none;box-shadow:none;cursor:default;transform:none}
+.btn:disabled::after{display:none}
+@keyframes fondo{to{background-position:-220% 0}}
+@keyframes halo{0%,100%{box-shadow:0 8px 20px rgba(90,79,212,.3)}50%{box-shadow:0 8px 34px rgba(139,124,255,.65)}}
+@keyframes brillo{0%{left:-60%}58%,100%{left:135%}}
+/* ===== LOBBY ===== */
+.lobby{max-width:900px;margin:auto;text-align:center}
+.codigo{font:400 150px "Bebas Neue",Impact,sans-serif;letter-spacing:.16em;line-height:1;margin:6px 0 14px;
+  background:linear-gradient(100deg,var(--accl),#fff,var(--acc),var(--accl));background-size:220% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;animation:fondo 5s linear infinite}
+.jugadores{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:10px 0}
+.jcard{padding:18px;text-align:left;transition:.3s}
+.jcard small{font-size:10px;letter-spacing:.16em;color:var(--mut);text-transform:uppercase}
+.jcard b{display:block;font:400 40px "Bebas Neue",Impact,sans-serif;margin-top:4px;text-transform:uppercase}
+#jc0.listo{border-color:var(--p1);box-shadow:0 0 28px rgba(86,114,184,.3)}
+#jc1.listo{border-color:var(--p2);box-shadow:0 0 28px rgba(176,84,95,.3)}
+#jc0.listo b{color:#9db3e8}#jc1.listo b{color:#e8a0a8}
+/* ===== JUEGO ===== */
+.juego{flex:1;min-height:0;display:grid;grid-template-columns:1.75fr 1fr;gap:16px}
+.col-izq,.col-der{display:flex;flex-direction:column;gap:12px;min-height:0}
+.arena{position:relative;flex:0 0 44%;min-height:170px;overflow:hidden;border-radius:16px;border:1px solid var(--line);background:radial-gradient(320px 170px at 50% 100%,rgba(139,124,255,.34),transparent 70%),linear-gradient(180deg,#121737,#080c1e);transition:flex-basis .5s cubic-bezier(.2,.8,.2,1)}
+/* Durante el resultado la arena se encoge para que la tabla quepa completa */
+.juego.resultado .arena{flex:0 0 34%;min-height:150px}
+.juego.resultado .fig .body{height:clamp(70px,17vh,145px)}
+.arena::before{content:"";position:absolute;inset:0;background:linear-gradient(rgba(139,124,255,.07) 1px,transparent 1px) 0 0/100% 26px;animation:scan 6s linear infinite;pointer-events:none}
+@keyframes scan{to{background-position:0 26px}}
+.piso{position:absolute;bottom:0;left:0;right:0;height:34px;background:repeating-linear-gradient(90deg,rgba(185,178,255,.12) 0 2px,transparent 2px 40px),linear-gradient(90deg,rgba(86,114,184,.3),rgba(176,84,95,.3));border-top:1px solid rgba(185,178,255,.45)}
+.fig{position:absolute;bottom:30px;width:160px;text-align:center}
+.fig.L{left:calc(50% - 215px);--d:40px}
+.fig.R{left:calc(50% + 55px);--d:-40px}
+.fig .nm{display:inline-block;font-size:12px;color:#fff;border:1px solid var(--line);padding:3px 9px;border-radius:999px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;background:rgba(0,0,0,.45)}
+.fig.L .nm{border-color:var(--p1);box-shadow:0 0 14px rgba(86,114,184,.5)}
+.fig.R .nm{border-color:var(--p2);box-shadow:0 0 14px rgba(176,84,95,.5)}
+.fig .body{transform-origin:50% 100%;height:clamp(96px,30vh,210px)}
+.sv{height:100%;width:auto;display:block;margin:0 auto;overflow:visible}
+.sv .brazoI{transform-box:view-box;transform-origin:20px 60px}
+.sv .brazoD{transform-box:view-box;transform-origin:80px 60px}
+.sv .f{display:none}
+.cara-normal .f-normal,.cara-feliz .f-feliz,.cara-triste .f-triste,.cara-grito .f-grito{display:inline}
+.lagrima{opacity:0}
+.cara-triste .lagrima{opacity:1;animation:lagr 1.3s infinite}
+.cara-triste .l2{animation-delay:.4s}
+@keyframes lagr{0%{transform:translateY(0);opacity:0}20%{opacity:1}100%{transform:translateY(24px);opacity:0}}
+.arena.modo-clash .fig{animation:lungeX 1.8s cubic-bezier(.5,0,.3,1) infinite}
+@keyframes lungeX{0%,100%{transform:translateX(0)}25%{transform:translateX(calc(var(--d) * -.3))}40%{transform:translateX(var(--d))}55%{transform:translateX(calc(var(--d) * .8))}75%{transform:translateX(0)}}
+.pose-idle{animation:respira 2s ease-in-out infinite}
+@keyframes respira{50%{transform:scale(1.02,.98)}}
+.pose-pelea-der{animation:empujeD 1.8s ease-in-out infinite}
+.pose-pelea-izq{animation:empujeI 1.8s ease-in-out infinite .9s}
+.pose-pelea-der .brazoD{animation:golpeD 1.8s ease-in-out infinite}
+.pose-pelea-izq .brazoI{animation:golpeI 1.8s ease-in-out infinite .9s}
+@keyframes golpeD{0%,100%{transform:rotate(0)}12%{transform:rotate(-95deg)}28%{transform:rotate(0)}}
+@keyframes golpeI{0%,100%{transform:rotate(0)}12%{transform:rotate(95deg)}28%{transform:rotate(0)}}
+@keyframes empujeD{0%,100%{transform:translateX(0) rotate(0)}12%{transform:translateX(10px) rotate(-4deg)}28%{transform:translateX(0)}}
+@keyframes empujeI{0%,100%{transform:translateX(0) rotate(0)}12%{transform:translateX(-10px) rotate(4deg)}28%{transform:translateX(0)}}
+.pose-golpe-der,.pose-golpe-izq{animation:plantado 1.2s ease-in-out infinite}
+.pose-golpe-der .brazoD{transform:rotate(-95deg)}
+.pose-golpe-izq .brazoI{transform:rotate(95deg)}
+@keyframes plantado{50%{transform:translateY(-3px)}}
+.pose-tumbado-izq{--caida:-84deg;animation:forcejeo 1.6s ease-in-out infinite}
+.pose-tumbado-der{--caida:84deg;animation:forcejeo 1.6s ease-in-out infinite}
+@keyframes forcejeo{0%,100%{transform:rotate(var(--caida))}50%{transform:rotate(calc(var(--caida) * .55)) translateY(-14px)}}
+.pose-tumbado-izq .brazoD,.pose-tumbado-der .brazoI{animation:manotazo .6s ease-in-out infinite alternate}
+@keyframes manotazo{from{transform:rotate(-30deg)}to{transform:rotate(70deg)}}
+.pose-danza{animation:bailar 1s ease-in-out infinite}
+@keyframes bailar{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-26px) rotate(6deg)}}
+.pose-danza .brazoI{animation:arrI 1s ease-in-out infinite}
+.pose-danza .brazoD{animation:arrD 1s ease-in-out infinite .5s}
+@keyframes arrI{0%,100%{transform:rotate(0)}50%{transform:rotate(170deg)}}
+@keyframes arrD{0%,100%{transform:rotate(0)}50%{transform:rotate(-170deg)}}
+.pose-triste{animation:hundido 1.6s ease-out forwards}
+.pose-triste .brazoD{transform:rotate(14deg)}
+@keyframes hundido{from{transform:none;filter:none}to{transform:translateY(14px) rotate(-6deg) scale(.94);filter:saturate(.3) brightness(.7)}}
+.pose-pensar{animation:duda 2.4s ease-in-out infinite}
+.pose-pensar .brazoD{transform:rotate(-30deg)}
+@keyframes duda{50%{transform:rotate(5deg)}}
+.pow{position:absolute;top:14%;left:50%;transform:translate(-50%,-50%);font:400 clamp(52px,8vh,88px) "Bebas Neue",Impact,sans-serif;color:#fff;text-shadow:0 0 26px rgba(139,124,255,.95),4px 4px 0 var(--acc);display:none;z-index:4;pointer-events:none;white-space:nowrap}
+.arena.modo-clash .pow{display:block;animation:powpop 1.8s infinite}
+.arena.modo-golpe .pow{display:block;animation:powpop 1.4s 1 forwards}
+@keyframes powpop{0%,30%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(-14deg)}40%{opacity:1;transform:translate(-50%,-50%) scale(1.12) rotate(-6deg)}60%,100%{opacity:0;transform:translate(-50%,-50%) scale(1) rotate(-6deg)}}
+.sparks{position:absolute;left:50%;top:44%;width:0;height:0;display:none}
+.arena.modo-clash .sparks{display:block}
+.sparks i{position:absolute;left:-4px;top:-4px;width:8px;height:8px;border-radius:50%;background:var(--accl);opacity:0;animation:spark 1.8s ease-out infinite;transform:rotate(var(--r))}
+@keyframes spark{0%,38%{opacity:0;transform:rotate(var(--r)) translateX(10px)}45%{opacity:1}75%,100%{opacity:0;transform:rotate(var(--r)) translateX(110px)}}
+.hcd{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,10,26,.7);z-index:5}
+.hcd.on{display:flex}
+.hcdN{font:400 190px "Bebas Neue",Impact,sans-serif;color:var(--acc);text-shadow:0 0 50px rgba(139,124,255,.7);animation:cdp .9s ease-out;line-height:1}
+.hcd small{font-size:12px;letter-spacing:.26em;color:var(--mut);text-transform:uppercase}
+@keyframes cdp{0%{transform:scale(2.6);opacity:0}35%{transform:scale(1);opacity:1}100%{transform:scale(.88);opacity:.5}}
+.arena.flash::after{content:"";position:absolute;inset:0;background:rgba(255,255,255,.22);animation:fl .5s forwards;pointer-events:none;z-index:6}
+@keyframes fl{to{opacity:0}}
+/* ===== PANELES ===== */
+.panel{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:16px 20px}
+.fila-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pill{font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:5px 11px;border:1px solid var(--accl);color:var(--accl);border-radius:999px}
+.pill.alta{border-color:var(--p2);color:#e8a0a8}
+.titulo{font:400 clamp(30px,3.8vh,46px) "Bebas Neue",Impact,sans-serif;margin:6px 0 2px;text-transform:uppercase;line-height:1;display:block}
+.motivo{font-size:13px;color:var(--mut);margin:2px 0 10px}
+.cuerpo{display:flex;gap:18px;align-items:center;min-height:0;flex:1}
+.tabla-wrap{flex:1;min-width:0}
+table{width:100%;border-collapse:separate;border-spacing:0 5px;font-size:clamp(11px,1.5vh,14px)}
+th{color:var(--mut);font-size:10px;letter-spacing:.12em;text-transform:uppercase;text-align:left;padding:0 10px;font-weight:400}
+td{padding:clamp(5px,.9vh,9px) 10px;background:rgba(255,255,255,.04);transition:.25s}
+td:first-child{border-radius:8px 0 0 8px;font-weight:700}td:last-child{border-radius:0 8px 8px 0}
+tbody tr{animation:filaIn .45s backwards}
+@keyframes filaIn{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+.corona{margin-left:6px}
+.bd{display:none;margin-left:8px;font-size:10px;padding:2px 6px;border-radius:4px;vertical-align:middle;font-weight:700}
+.bd0{background:var(--p1);color:#fff}
+.bd1{background:var(--p2);color:#fff}
+tr.p0 .bd0{display:inline-block;animation:parpadeo 1.2s infinite}
+tr.p1 .bd1{display:inline-block;animation:parpadeo 1.2s infinite}
+tr.p0 td{box-shadow:inset 0 0 0 1px var(--p1);background:rgba(86,114,184,.26)}
+tr.p1 td{box-shadow:inset 0 0 0 1px var(--p2);background:rgba(176,84,95,.24)}
+tr.p0.p1 td{background:linear-gradient(90deg,rgba(86,114,184,.26),rgba(176,84,95,.24))}
+tr.fijo .bd::after{content:" 🔒"}
+@keyframes parpadeo{50%{filter:brightness(1.55)}}
+.ring{width:clamp(88px,14vh,130px);height:clamp(88px,14vh,130px);position:relative;flex:0 0 auto}
+.ring svg{transform:rotate(-90deg)}
+#hArc{filter:drop-shadow(0 0 7px rgba(139,124,255,.9))}
+.ring .num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring b{font:400 clamp(38px,5.6vh,54px) "Bebas Neue",Impact,sans-serif;line-height:1}
+.ring small{font-size:9px;letter-spacing:.16em;color:var(--mut)}
+.ring.hot b{color:var(--p2);animation:beat .7s infinite}
+.ring.hot #hArc{stroke:var(--p2)}
+@keyframes beat{50%{transform:scale(1.12)}}
+.resp{font-size:13px;color:var(--accl);margin-top:8px;text-align:center}
+/* ===== RESULTADO ===== */
+.res-cab{display:flex;align-items:center;gap:14px;margin:4px 0 2px}
+.res-emoji{flex:0 0 auto;width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:33px;animation:emojiPop .7s cubic-bezier(.2,1.7,.4,1),emojiHalo 2.2s ease-in-out infinite .7s}
+@keyframes emojiPop{from{transform:scale(0) rotate(-40deg)}to{transform:scale(1) rotate(0)}}
+@keyframes emojiHalo{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.18)}50%{box-shadow:0 0 0 11px rgba(255,255,255,0)}}
+.res-big{font:400 clamp(32px,4.8vh,52px) "Bebas Neue",Impact,sans-serif;text-transform:uppercase;line-height:1;color:var(--acc);text-shadow:0 0 24px rgba(139,124,255,.45)}
+.res-expl{font-size:13px;line-height:1.5;margin:4px 0 2px}
+.res-expl b{color:var(--acc)}
+.rtabla-wrap{flex:0 1 auto;min-height:0;overflow:auto;margin-top:4px}
+.rtabla-wrap::-webkit-scrollbar{width:6px}
+.rtabla-wrap::-webkit-scrollbar-thumb{background:rgba(139,124,255,.4);border-radius:3px}
+tr.ok td{box-shadow:inset 0 0 0 1px var(--acc);background:rgba(139,124,255,.2);animation:okGlow 2.2s ease-in-out infinite}
+tr.ok td:first-child{color:var(--acc)}
+@keyframes okGlow{50%{background:rgba(139,124,255,.32)}}
+.who{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;color:#fff;margin-right:5px}
+.who.w0{background:var(--p1)}
+.who.w1{background:var(--p2)}
+.accion{margin-top:10px;display:flex;justify-content:flex-end;align-items:center;gap:14px;flex:0 0 auto}
+.accion .muted{font-size:12px}
+.accion .btn{margin-top:0;padding:11px 22px;font-size:21px}
+/* ===== MARCADOR Y TABLERO ===== */
+.marcador{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center}
+.pj{border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center;background:rgba(255,255,255,.03)}
+.pj.p0{border-color:var(--p1)}
+.pj.p1{border-color:var(--p2)}
+.pj small{font-size:10px;letter-spacing:.16em;color:var(--mut);text-transform:uppercase}
+.pj b{display:block;font:400 clamp(22px,3.2vh,32px) "Bebas Neue",Impact,sans-serif;text-transform:uppercase;line-height:1.05;margin:4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pips{display:flex;justify-content:center;gap:6px}
+.pips i{width:12px;height:12px;border-radius:50%;border:1px solid var(--mut);transition:.3s}
+.pj.p0 .pips i.on{background:var(--p1);border-color:var(--p1);box-shadow:0 0 12px var(--p1);animation:pipPop .5s cubic-bezier(.2,1.7,.4,1)}
+.pj.p1 .pips i.on{background:var(--p2);border-color:var(--p2);box-shadow:0 0 12px var(--p2);animation:pipPop .5s cubic-bezier(.2,1.7,.4,1)}
+@keyframes pipPop{from{transform:scale(0)}to{transform:scale(1)}}
+.vs{font:400 34px "Bebas Neue",Impact,sans-serif;color:var(--mut)}
+.tablero{display:grid;margin-top:4px}
+.nodo{display:flex;gap:12px;align-items:stretch;position:relative;padding-bottom:10px}
+.nodo::before{content:"";position:absolute;left:8px;top:22px;bottom:0;width:1px;background:var(--line)}
+.nodo:last-child::before{display:none}
+.bola{flex:0 0 16px;height:16px;border-radius:50%;border:1px solid var(--mut);margin-top:6px;background:transparent}
+.nodo.hecho .bola{background:var(--acc);border-color:var(--acc)}
+.nodo.actual .bola{background:var(--accl);border-color:var(--accl);box-shadow:0 0 16px var(--accl);animation:parpadeo 1s infinite}
+.info{flex:1;border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:rgba(255,255,255,.03);position:relative;min-width:0}
+.nodo.actual .info{border-color:var(--accl);animation:nodoGlow 1.8s ease-in-out infinite}
+.nodo.desempate .info{border-color:var(--acc)}
+.nodo.desempate .info small{color:var(--acc);font-weight:700}
+@keyframes nodoGlow{50%{box-shadow:0 0 24px rgba(185,178,255,.35)}}
+.info small{font-size:10px;letter-spacing:.14em;color:var(--mut)}
+.info b{display:block;font:400 22px "Bebas Neue",Impact,sans-serif;text-transform:uppercase;line-height:1.05}
+.info em{font-size:11px;font-style:normal;color:var(--mut)}
+.stamp{position:absolute;right:10px;top:8px;font:400 18px "Bebas Neue",Impact,sans-serif;color:#fff;padding:0 8px;border-radius:4px}
+.stamp.g0{background:var(--p1)}
+.stamp.g1{background:var(--p2)}
+.stamp.empate{background:var(--mut)}
+/* ===== FINAL ===== */
+.final{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,10,26,.95);backdrop-filter:blur(8px);overflow-y:auto;padding:30px;gap:6px}
+.final.on{display:flex;animation:in .6s cubic-bezier(.2,.8,.2,1)}
+.final > *{flex-shrink:0}
+@keyframes in{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+.fEmoji{font-size:clamp(50px,8vh,86px);line-height:1;animation:emojiPop .7s cubic-bezier(.2,1.6,.4,1) backwards,fEmojiBota 1.7s ease-in-out .7s infinite}
+@keyframes fEmojiBota{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-15px) rotate(5deg)}}
+.fTitulo{font:400 clamp(38px,7.2vh,80px) "Bebas Neue",Impact,sans-serif;text-align:center;text-transform:uppercase;color:var(--acc);line-height:1;
+  animation:fTitEntra .8s cubic-bezier(.2,1.5,.4,1) backwards,fTitGlow 2.6s ease-in-out .8s infinite}
+@keyframes fTitEntra{0%{transform:scale(.55);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes fTitGlow{0%,100%{text-shadow:0 0 44px rgba(139,124,255,.6)}50%{text-shadow:0 0 78px rgba(139,124,255,1)}}
+.fFigs{display:flex;gap:60px;justify-content:center;align-items:flex-end;margin:4px 0}
+.ff{text-align:center;animation:ffEntra .75s cubic-bezier(.2,1.45,.4,1) backwards}
+.ff:nth-child(2){animation-delay:.16s}
+@keyframes ffEntra{0%{transform:translateY(40px) scale(.8);opacity:0}100%{transform:none;opacity:1}}
+.ff .body{height:clamp(100px,20vh,180px)}
+.ff.perdedor .body{height:clamp(80px,15vh,140px)}
+.ff small{display:block;font:400 22px "Bebas Neue",Impact,sans-serif;margin-top:6px;text-transform:uppercase}
+.boleto{position:relative;overflow:hidden;padding:16px 46px;background:linear-gradient(120deg,#f5c451,#e9a92f,#fde68a);color:#2a1a02;text-align:center;border-radius:12px;
+  animation:boletoEntra .9s cubic-bezier(.2,1.6,.4,1) backwards,boletoFlota 3.4s ease-in-out 1s infinite,boletoHalo 2.2s ease-in-out 1s infinite}
+@keyframes boletoEntra{0%{transform:scale(.3) rotate(-18deg);opacity:0}60%{transform:scale(1.12) rotate(4deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+@keyframes boletoFlota{0%,100%{transform:translateY(0) rotate(-1.2deg)}50%{transform:translateY(-11px) rotate(1.2deg)}}
+@keyframes boletoHalo{0%,100%{box-shadow:0 14px 38px rgba(245,196,81,.35)}50%{box-shadow:0 20px 72px rgba(245,196,81,.9)}}
+@keyframes numPulso{50%{transform:scale(1.06);text-shadow:0 0 24px rgba(255,255,255,.95)}}
+
+.boleto::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.75),transparent);transform:skewX(-20deg);animation:brillo 3s infinite}
+.boleto b{display:block;font:400 clamp(40px,6.2vh,62px) "Bebas Neue",Impact,sans-serif;letter-spacing:.08em;line-height:1;animation:numPulso 1.8s ease-in-out infinite}
+.resumen{width:100%;max-width:700px;margin-top:8px}
+.resumen h4{font-size:11px;letter-spacing:.22em;color:var(--mut);text-transform:uppercase;margin:0 0 6px;text-align:center;font-weight:400}
+.res-lista{display:grid;gap:7px}
+.fila{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 12px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.03);font-size:13px}
+.fila span:last-child{color:var(--mut);text-align:right}
+.fmarc{font-size:15px;color:var(--accl);text-align:center;margin-top:8px}
+</style></head>
+<body>
+<canvas id="net"></canvas>
+<canvas id="hConf"></canvas>
+<canvas id="fConf"></canvas>
+
+<div class="wrap">
+  <div class="top">
+    <div class="marca"><span class="marca-j">JEDEST</span><span class="marca-x">×</span><span class="marca-i">IntouchCX</span></div>
+    <div class="estado" id="estado">Sin sala</div>
+  </div>
+
+  <section id="vInicio" class="card lobby">
+    <div class="h">Panel del anfitrión</div>
+    <div class="glitch" data-t="Duelo de ticket" style="font-size:110px;margin:10px 0">Duelo de ticket</div>
+    <p class="muted">Crea la sala. Dos técnicos entran con el código desde su celular.</p>
+    <button class="btn" id="crear">Crear sala</button>
+  </section>
+
+  <section id="vLobby" class="card lobby oculto">
+    <div class="h">Sala lista</div>
+    <p class="muted" style="margin:0;font-size:13px">Código de la sala</p>
+    <div class="codigo" id="codigo">----</div>
+    <div class="jugadores">
+      <div class="card jcard" id="jc0"><small>Técnico 1 · azul</small><b id="jn0">Esperando...</b></div>
+      <div class="card jcard" id="jc1"><small>Técnico 2 · rojo</small><b id="jn1">Esperando...</b></div>
+    </div>
+    <button class="btn" id="iniciar" disabled>Iniciar duelo</button>
+    <p class="muted" id="estadoLobby" style="margin:10px 0 0;font-size:13px"></p>
+  </section>
+
+  <section id="vJuego" class="juego oculto">
+    <div class="col-izq">
+      <div class="arena modo-clash" id="arena">
+        <div class="piso"></div>
+        <div class="sparks"><i style="--r:0deg"></i><i style="--r:45deg"></i><i style="--r:90deg"></i><i style="--r:135deg"></i><i style="--r:180deg"></i><i style="--r:225deg"></i><i style="--r:270deg"></i><i style="--r:315deg"></i></div>
+        <div class="fig L"><span class="nm" id="nmL">Técnico 1</span><div class="body pose-idle cara-grito" id="bL"></div></div>
+        <div class="fig R"><span class="nm" id="nmR">Técnico 2</span><div class="body pose-idle cara-grito" id="bR"></div></div>
+        <div class="pow" id="pow">POW!</div>
+        <div class="hcd" id="hCd"><div class="hcdN" id="hCdN">3</div><small>Preparen el ticket</small></div>
+      </div>
+
+      <div class="card panel" id="pPregunta">
+        <div class="fila-top"><span class="eyebrow" id="hRonda"></span><span class="pill" id="hTipo"></span></div>
+        <div class="titulo glitch" id="hTitulo" data-t=""></div>
+        <div class="motivo" id="hMotivo"></div>
+        <div class="cuerpo">
+          <div class="tabla-wrap">
+            <table><thead><tr><th>Técnico</th><th>Senior</th><th>Carga</th><th>Turno</th></tr></thead><tbody id="hTabla"></tbody></table>
+            <div class="resp" id="hResp"></div>
+          </div>
+          <div class="ring" id="hRing">
+            <svg width="100%" height="100%" viewBox="0 0 140 140"><circle cx="70" cy="70" r="60" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10"/>
+            <circle id="hArc" cx="70" cy="70" r="60" fill="none" stroke="#8b7cff" stroke-width="10" stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="0"/></svg>
+            <div class="num"><b id="hSecs">60</b><small>SEG</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card panel oculto" id="pResultado">
+        <div class="fila-top"><span class="eyebrow" id="rRonda"></span><span class="pill" id="rPill">Respuesta correcta</span></div>
+        <div class="res-cab">
+          <div class="res-emoji" id="rEmoji">😎</div>
+          <div class="res-big" id="rTitulo"></div>
+        </div>
+        <p class="res-expl"><b>Correcta: <span id="rCorrecta"></span></b><br><span id="rExpl"></span></p>
+        <div class="rtabla-wrap">
+          <table><thead><tr><th>Técnico</th><th>Senior</th><th>Carga</th><th>Turno</th><th>Lo eligió</th></tr></thead><tbody id="rTabla"></tbody></table>
+        </div>
+        <div class="accion">
+          <span class="muted" id="rNota"></span>
+          <button class="btn" id="btnNext" style="display:none">Siguiente ronda ▶</button>
+          <button class="btn" id="btnFin" style="display:none">Ver resultado final ▶</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-der">
+      <div class="card">
+        <div class="h" style="font-size:32px;margin-bottom:10px">Marcador</div>
+        <div class="marcador">
+          <div class="pj p0"><small>Técnico 1</small><b id="mN0">—</b><div class="pips" id="mP0"></div></div>
+          <div class="vs">VS</div>
+          <div class="pj p1"><small>Técnico 2</small><b id="mN1">—</b><div class="pips" id="mP1"></div></div>
+        </div>
+      </div>
+      <div class="card" style="flex:1;min-height:0;overflow:hidden">
+        <div class="h" style="font-size:32px;margin-bottom:8px">Tablero de avance</div>
+        <div class="tablero" id="hTablero"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="final" id="hFinal">
+  <div class="fEmoji" id="fEmoji">😎</div>
+  <div class="fTitulo" id="fTitulo"></div>
+  <div class="fFigs" id="fFigs"></div>
+  <div class="boleto oculto" id="fBoleto"><div style="font-size:11px;letter-spacing:.22em">BOLETO DORADO · RIFA</div><b id="fNum"></b></div>
+  <div class="resumen">
+    <h4>Resumen de batallas</h4>
+    <div class="res-lista" id="fResumen"></div>
+    <div class="fmarc" id="fMarcador"></div>
+  </div>
+  <button class="btn" id="cerrar" style="margin-top:10px;padding:10px 22px;font-size:20px">Salir y cerrar sala</button>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+const $ = s => document.querySelector(s);
+const COL = ['#5672b8', '#b0545f'];
+const CIRC = 377;
+const WINS_TO_WIN = 2;
+const RONDAS_BASE = 3;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const FIG = c => `<svg class="sv" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg">
+<g class="piernaI"><rect x="35" y="94" width="12" height="42" rx="6" fill="#1b2340"/><rect x="31" y="132" width="20" height="10" rx="5" fill="#0b1020"/></g>
+<g class="piernaD"><rect x="53" y="94" width="12" height="42" rx="6" fill="#1b2340"/><rect x="49" y="132" width="20" height="10" rx="5" fill="#0b1020"/></g>
+<g class="brazoI"><rect x="14" y="58" width="12" height="42" rx="6" fill="${c}"/><circle cx="20" cy="102" r="6" fill="${c}"/></g>
+<g class="brazoD"><rect x="74" y="58" width="12" height="42" rx="6" fill="${c}"/><circle cx="80" cy="102" r="6" fill="${c}"/></g>
+<rect x="27" y="52" width="46" height="50" rx="16" fill="${c}"/>
+<circle cx="50" cy="32" r="21" fill="${c}"/>
+<g class="f f-normal"><circle cx="43" cy="30" r="3" fill="#0a0f22"/><circle cx="57" cy="30" r="3" fill="#0a0f22"/><path d="M43 40 Q50 43 57 40" stroke="#0a0f22" stroke-width="2.6" fill="none" stroke-linecap="round"/></g>
+<g class="f f-feliz"><path d="M38 31 Q43 25 48 31" stroke="#0a0f22" stroke-width="2.8" fill="none" stroke-linecap="round"/><path d="M52 31 Q57 25 62 31" stroke="#0a0f22" stroke-width="2.8" fill="none" stroke-linecap="round"/><path d="M38 38 Q50 52 62 38 Z" fill="#0a0f22"/></g>
+<g class="f f-triste"><circle cx="43" cy="30" r="3" fill="#0a0f22"/><circle cx="57" cy="30" r="3" fill="#0a0f22"/><path d="M42 45 Q50 37 58 45" stroke="#0a0f22" stroke-width="2.6" fill="none" stroke-linecap="round"/></g>
+<g class="f f-grito"><path d="M37 24 L47 29" stroke="#0a0f22" stroke-width="2.6" stroke-linecap="round"/><path d="M63 24 L53 29" stroke="#0a0f22" stroke-width="2.6" stroke-linecap="round"/><circle cx="43" cy="32" r="2.6" fill="#0a0f22"/><circle cx="57" cy="32" r="2.6" fill="#0a0f22"/><ellipse cx="50" cy="42" rx="6" ry="5" fill="#0a0f22"/></g>
+<circle class="lagrima l1" cx="41" cy="37" r="2.6" fill="#93c5fd"/><circle class="lagrima l2" cx="59" cy="37" r="2.6" fill="#93c5fd"/>
+</svg>`;
+$('#bL').innerHTML = FIG(COL[0]);
+$('#bR').innerHTML = FIG(COL[1]);
+
+const store = {
+  get() { try { return JSON.parse(sessionStorage.getItem('jedest_host')); } catch (e) { return null; } },
+  set(v) { try { sessionStorage.setItem('jedest_host', JSON.stringify(v)); } catch (e) {} },
+  clear() { try { sessionStorage.removeItem('jedest_host'); } catch (e) {} }
+};
+const token = (() => {
+  const s = store.get();
+  if (s && s.token) return s.token;
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+})();
+
+let offset = 0, countdownEnd = 0, roundEnd = 0, loop = null, ultimoCd = null;
+let nombres = ['Técnico 1', 'Técnico 2'], picks = {}, bloqueados = [];
+
+function vista(v) {
+  $('#vInicio').classList.toggle('oculto', v !== 'inicio');
+  $('#vLobby').classList.toggle('oculto', v !== 'lobby');
+  $('#vJuego').classList.toggle('oculto', v !== 'juego');
+}
+
+$('#crear').onclick = () => socket.emit('host:create', { token });
+
+socket.on('connect', () => {
+  const s = store.get();
+  if (s && s.code) {
+    socket.emit('host:resume', { code: s.code, token: s.token || token }, res => {
+      if (!res || !res.ok) { store.clear(); vista('inicio'); $('#estado').textContent = 'Sin sala'; }
+    });
+  }
+});
+
+socket.on('room:created', room => {
+  store.set({ code: room.code, token });
+  $('#codigo').textContent = room.code;
+  $('#estado').textContent = 'Sala ' + room.code;
+  if (!room.started) vista('lobby');
+  pintarLobby(room);
+});
+
+socket.on('room:update', room => {
+  nombres = [0, 1].map(i => {
+    const p = room.players.find(x => x.key === i);
+    return p ? p.name : `Técnico ${i + 1}`;
+  });
+  $('#nmL').textContent = nombres[0];
+  $('#nmR').textContent = nombres[1];
+  pintarLobby(room);
+});
+
+function pintarLobby(room) {
+  [0, 1].forEach(i => {
+    const p = room.players.find(x => x.key === i);
+    $('#jn' + i).textContent = p ? p.name : 'Esperando...';
+    $('#jc' + i).classList.toggle('listo', !!p);
+  });
+  $('#iniciar').disabled = room.players.length < 2 || room.started;
+  $('#estadoLobby').textContent = room.players.length < 2 ? 'Faltan técnicos para iniciar.' : 'Los dos están listos. Tú decides cuándo empieza.';
+}
+
+$('#iniciar').onclick = () => {
+  socket.emit('host:start', res => { if (!res.ok) alert(res.error); });
+};
+
+$('#btnNext').onclick = () => {
+  socket.emit('host:next');
+  $('#btnNext').style.display = 'none';
+  $('#rNota').textContent = 'Preparando la ronda...';
+};
+$('#btnFin').onclick = () => socket.emit('host:finish');
+$('#cerrar').onclick = () => socket.emit('host:close');
+
+function setB(i, pose, cara) {
+  $(i === 0 ? '#bL' : '#bR').className = 'body ' + pose + ' cara-' + cara;
+}
+
+// Escenas de los monitos: pelea, golpe (uno de pie, otro tumbado), resultado y empate
+function escena(modo, ganador) {
+  const A = $('#arena');
+  A.className = 'arena modo-' + modo;
+  if (modo === 'clash') {
+    setB(0, 'pose-pelea-der', 'grito');
+    setB(1, 'pose-pelea-izq', 'grito');
+    const pows = ['POW!', 'BAM!', 'ZAS!'];
+    $('#pow').textContent = pows[Math.floor(Math.random() * pows.length)];
+  } else if (modo === 'golpe') {
+    const cae = 1 - ganador;
+    setB(ganador, ganador === 0 ? 'pose-golpe-der' : 'pose-golpe-izq', 'feliz');
+    setB(cae, cae === 0 ? 'pose-tumbado-izq' : 'pose-tumbado-der', 'triste');
+    $('#pow').textContent = '¡BAM!';
+    A.classList.add('flash');
+    setTimeout(() => A.classList.remove('flash'), 600);
+  } else if (modo === 'empate') {
+    setB(0, 'pose-pensar', 'normal');
+    setB(1, 'pose-pensar', 'normal');
+  } else {
+    setB(ganador, 'pose-danza', 'feliz');
+    setB(1 - ganador, 'pose-triste', 'triste');
+  }
+}
+
+function tablaHTML(tecnicos) {
+  return tecnicos.map((t, i) =>
+    `<tr data-i="${i}" style="animation-delay:${i * 70}ms"><td>${esc(t.nombre)}${t.senior ? '<span class="corona">👑</span>' : ''}<span class="bd bd0">J1</span><span class="bd bd1">J2</span></td><td>${t.senior ? 'Sí' : 'No'}</td><td>${t.carga}</td><td>${t.turno}</td></tr>`).join('');
+}
+
+// Resalta en la tabla lo que cada técnico está eligiendo en vivo
+function pintarPicks() {
+  document.querySelectorAll('#hTabla tr').forEach(tr => {
+    const i = Number(tr.dataset.i);
+    tr.classList.toggle('p0', picks[0] === i);
+    tr.classList.toggle('p1', picks[1] === i);
+    tr.classList.toggle('fijo', (bloqueados.includes(0) && picks[0] === i) || (bloqueados.includes(1) && picks[1] === i));
+  });
+}
+
+function pips(n) {
+  return Array.from({ length: WINS_TO_WIN }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('');
+}
+
+function marcadorHTML(m) {
+  m.forEach(x => {
+    $('#mN' + x.key).textContent = x.name;
+    $('#mP' + x.key).innerHTML = pips(x.wins);
+  });
+}
+
+function tableroHTML(historial, total, actual) {
+  let html = '';
+  for (let i = 0; i < total; i++) {
+    const h = historial[i];
+    let clase = 'pendiente';
+    if (h) clase = 'hecho';
+    else if (i === actual) clase = 'actual';
+    let stamp = '';
+    if (h) {
+      const esEmpate = h.ganador === 'Empate';
+      const slot = esEmpate ? -1 : nombres.findIndex(n => n === h.ganador);
+      const cls = esEmpate ? 'empate' : (slot === 1 ? 'g1' : 'g0');
+      stamp = `<span class="stamp ${cls}">${esEmpate ? 'EMPATE' : 'GANÓ ' + esc(h.ganador).toUpperCase()}</span>`;
+    }
+    html += `<div class="nodo ${clase} ${i >= RONDAS_BASE ? 'desempate' : ''}"><div class="bola"></div><div class="info"><small>${i >= RONDAS_BASE ? 'DESEMPATE' : 'RONDA ' + (i + 1)}</small><b>${h ? esc(h.titulo) : (i === actual ? 'En juego' : 'Pendiente')}</b><em>${h ? 'ticket resuelto' : (i === actual ? 'asignando...' : 'por llegar')}</em>${stamp}</div></div>`;
+  }
+  $('#hTablero').innerHTML = html;
+}
+
+function mostrarCd(v) {
+  $('#hCd').classList.add('on');
+  if (String(v) === ultimoCd) return;
+  ultimoCd = String(v);
+  const e = $('#hCdN');
+  e.textContent = v;
+  e.style.animation = 'none';
+  void e.offsetWidth;
+  e.style.animation = '';
+}
+
+function setRing(s) {
+  $('#hSecs').textContent = s;
+  $('#hArc').setAttribute('stroke-dashoffset', (CIRC * (1 - s / 60)).toFixed(1));
+  $('#hRing').classList.toggle('hot', s <= 10);
+}
+
+socket.on('round:start', d => {
+  offset = d.serverNow - Date.now();
+  countdownEnd = d.countdownEnd;
+  roundEnd = d.roundEnd;
+  ultimoCd = null;
+  picks = {};
+  bloqueados = [];
+  vista('juego');
+  $('#vJuego').classList.remove('resultado');
+  $('#hFinal').classList.remove('on');
+
+  $('#hRonda').textContent = d.desempate ? 'Ronda de desempate · gana el más rápido' : `Ronda ${d.round} de ${d.totalRounds}`;
+  $('#hTipo').textContent = 'Prioridad ' + d.escenario.tipo;
+  $('#hTipo').className = 'pill' + (d.escenario.tipo === 'NORMAL' ? '' : ' alta');
+  $('#hTitulo').textContent = `${d.escenario.titulo} · ${d.escenario.ticket}`;
+  $('#hTitulo').dataset.t = `${d.escenario.titulo} · ${d.escenario.ticket}`;
+  $('#hMotivo').textContent = d.escenario.motivo;
+  $('#hTabla').innerHTML = tablaHTML(d.escenario.tecnicos);
+  $('#hResp').textContent = `Bloqueadas 0 de ${d.total}`;
+  $('#pPregunta').classList.remove('oculto');
+  $('#pResultado').classList.add('oculto');
+
+  marcadorHTML(d.marcador);
+  tableroHTML(d.historial, d.totalRounds, d.round - 1);
+  escena('clash');
+  pintarPicks();
+
+  clearInterval(loop);
+  loop = setInterval(pintar, 100);
+  pintar();
+});
+
+socket.on('room:picks', p => {
+  picks = p || {};
+  pintarPicks();
+});
+
+socket.on('room:answers', d => {
+  bloqueados = d.slots || [];
+  $('#hResp').textContent = `Bloqueadas ${d.count} de ${d.total}`;
+  pintarPicks();
+  // Primer bloqueo: el que bloqueó queda de pie y el otro cae al piso
+  if (d.count === 1 && d.total === 2 && $('#arena').classList.contains('modo-clash')) {
+    escena('golpe', d.slots[0]);
+  }
+});
+
+socket.on('round:result', d => {
+  clearInterval(loop);
+  $('#hCd').classList.remove('on');
+  $('#pPregunta').classList.add('oculto');
+  $('#pResultado').classList.remove('oculto');
+  $('#vJuego').classList.add('resultado');
+
+  const t = d.escenario.tecnicos;
+  $('#rRonda').textContent = d.desempate ? `Desempate · ${d.escenario.ticket}` : `Ronda ${d.round} de ${d.totalRounds} · ${d.escenario.ticket}`;
+  $('#rTitulo').textContent = d.ganadorKey === null ? 'Empate en la ronda' : `Ganó ${d.ganadorNombre}`;
+  $('#rCorrecta').textContent = t[d.correcta].nombre;
+  $('#rExpl').textContent = d.explicacion;
+
+  // Solo la carita del que ganó, en el color de ese técnico
+  const gan = d.ganadorKey === null ? null : d.resultados.find(r => r.key === d.ganadorKey);
+  const em = $('#rEmoji');
+  em.textContent = gan ? gan.emoji : '😐';
+  em.style.background = gan ? COL[d.ganadorKey] : 'rgba(255,255,255,.1)';
+  em.style.animation = 'none';
+  void em.offsetWidth;
+  em.style.animation = '';
+
+  // La tabla de cargas se queda a la vista para poder explicar el ejercicio
+  $('#rTabla').innerHTML = t.map((x, i) => {
+    const quien = d.resultados.filter(r => r.option === i)
+      .map(r => `<span class="who w${r.key}">${esc(r.name)}</span>`).join('') || '<span class="muted">—</span>';
+    return `<tr class="${i === d.correcta ? 'ok' : ''}" style="animation-delay:${i * 70}ms"><td>${esc(x.nombre)}${x.senior ? '<span class="corona">👑</span>' : ''}</td><td>${x.senior ? 'Sí' : 'No'}</td><td>${x.carga}</td><td>${x.turno}</td><td>${quien}</td></tr>`;
+  }).join('');
+
+  marcadorHTML(d.marcador);
+  tableroHTML(d.historial, d.totalRounds, -1);
+
+  if (d.ganadorKey === null) escena('empate');
+  else escena('resultado', d.ganadorKey);
+
+  $('#btnNext').style.display = d.fin ? 'none' : '';
+  $('#btnNext').innerHTML = d.siguienteDesempate ? 'Ronda de desempate ▶' : 'Siguiente ronda ▶';
+  $('#btnFin').style.display = d.fin ? '' : 'none';
+  $('#rNota').textContent = d.fin ? 'Hay ganador de la partida.'
+    : (d.siguienteDesempate ? 'Siguen empatados: va una ronda de desempate y la gana el más rápido.'
+                            : 'Cuando estés lista, lanza la siguiente ronda.');
+});
+
+socket.on('game:over', d => {
+  clearInterval(loop);
+  $('#hCd').classList.remove('on');
+  const hay = d.ganadorKey !== null;
+  escena(hay ? 'resultado' : 'empate', d.ganadorKey);
+
+  $('#fEmoji').textContent = hay ? '😎' : '😐';
+  $('#fTitulo').textContent = hay ? `¡Ganó ${d.ganadorNombre}!` : 'Empate en la partida';
+  $('#fFigs').innerHTML = [0, 1].map(s => {
+    const gano = hay && s === d.ganadorKey;
+    const pierde = hay && s !== d.ganadorKey;
+    const pose = !hay ? 'pose-pensar' : (gano ? 'pose-danza' : 'pose-triste');
+    const cara = gano ? 'feliz' : (pierde ? 'triste' : 'normal');
+    return `<div class="ff ${pierde ? 'perdedor' : ''}"><div class="body ${pose} cara-${cara}">${FIG(COL[s])}</div><small>${esc(nombres[s])}</small></div>`;
+  }).join('');
+  $('#fBoleto').classList.toggle('oculto', !hay);
+  if (hay) $('#fNum').textContent = '#' + String(d.boleto).padStart(4, '0');
+  $('#fResumen').innerHTML = d.batallas.map(b =>
+    `<div class="fila"><span>Ronda ${b.round} · ${esc(b.titulo)} <i class="muted">(${esc(b.correcta)})</i></span><span>${b.ganador ? 'Ganó ' + esc(b.ganador) : 'Empate'}</span></div>`).join('');
+  $('#fMarcador').textContent = 'Marcador final: ' + d.marcador.map(m => `${m.name} ${m.wins}`).join(' · ');
+  $('#hFinal').classList.add('on');
+  if (hay) lanzarConfeti($('#fConf'));
+});
+
+socket.on('room:closed', () => {
+  store.clear();
+  alert('La sala se cerró.');
+  location.reload();
+});
+
+function pintar() {
+  const ahora = Date.now() + offset;
+  if (ahora < countdownEnd) {
+    mostrarCd(Math.ceil((countdownEnd - ahora) / 1000));
+    return;
+  }
+  $('#hCd').classList.remove('on');
+  setRing(Math.max(0, Math.ceil((roundEnd - ahora) / 1000)));
+}
+
+let confetiCorriendo = false;
+// Confeti sin fin: cada pieza que sale por abajo vuelve a nacer arriba
+function lanzarConfeti(canvas) {
+  if (confetiCorriendo) return;
+  confetiCorriendo = true;
+  const x = canvas.getContext("2d");
+  const medir = () => { canvas.width = innerWidth; canvas.height = innerHeight; };
+  medir();
+  addEventListener("resize", medir);
+  const cols = ["#b9b2ff","#8b7cff","#5a4fd4","#5672b8","#b0545f","#f5c451"];
+  const nuevo = () => ({
+    x: Math.random() * canvas.width, y: -30 - Math.random() * canvas.height,
+    vx: (Math.random() - .5) * 3.4, vy: 1.5 + Math.random() * 2.2, g: .035,
+    vmax: 4.5 + Math.random() * 2.5,
+    r: Math.random() * 6, vr: (Math.random() - .5) * .22,
+    sw: Math.random() * 6.28, sa: .4 + Math.random() * .9,
+    s: 8 + Math.random() * 8, c: cols[Math.floor(Math.random() * cols.length)]
+  });
+  const P = Array.from({ length: 240 }, nuevo);
+  (function step() {
+    x.clearRect(0, 0, canvas.width, canvas.height);
+    P.forEach(p => {
+      p.vy = Math.min(p.vy + p.g, p.vmax);
+      p.sw += .03;
+      p.x += p.vx + Math.sin(p.sw) * p.sa;
+      p.y += p.vy;
+      p.r += p.vr;
+      if (p.y > canvas.height + 40) { Object.assign(p, nuevo()); p.y = -30; }
+      if (p.x < -40) p.x = canvas.width + 30;
+      if (p.x > canvas.width + 40) p.x = -30;
+      x.save(); x.translate(p.x, p.y); x.rotate(p.r); x.fillStyle = p.c;
+      x.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); x.restore();
+    });
+    requestAnimationFrame(step);
+  })();
+}
+
+const cv = $('#net'), cx = cv.getContext('2d');
+let W, H, pts = [];
+function rs() {
+  W = cv.width = innerWidth; H = cv.height = innerHeight;
+  pts = Array.from({ length: Math.min(110, Math.floor(W * H / 14000)) }, () => ({
+    x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35,
+    r: Math.random() * 2 + .8, c: Math.random() < .5 ? '139,124,255' : '185,178,255'
+  }));
+}
+function draw() {
+  cx.clearRect(0, 0, W, H);
+  pts.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0 || p.x > W) p.vx *= -1;
+    if (p.y < 0 || p.y > H) p.vy *= -1;
+  });
+  for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+    const a = pts[i], b = pts[j], d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (d < 160) { cx.strokeStyle = `rgba(150,140,255,${(1 - d / 160) * .22})`; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(a.x, a.y); cx.lineTo(b.x, b.y); cx.stroke(); }
+  }
+  pts.forEach(p => { cx.fillStyle = `rgba(${p.c},.8)`; cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 7); cx.fill(); });
+  requestAnimationFrame(draw);
+}
+rs(); addEventListener('resize', rs); draw();
+</script>
+</body></html>

@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Duelo de ticket · Jedest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* Misma paleta que el panel del anfitrión:
+   violeta = interfaz, azul/rojo = los dos técnicos, dorado = boleto */
+:root{--bg:#080a1a;--tx:#f0f1ff;--mut:#8b93c4;--line:rgba(140,130,255,.16);--panel:rgba(124,108,255,.045);
+  --acc:#8b7cff;--acc2:#5a4fd4;--accl:#b9b2ff;--p1:#5672b8;--p2:#b0545f;--gold:#f5c451}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:radial-gradient(1000px 640px at 12% -12%,rgba(139,124,255,.26),transparent 62%),radial-gradient(800px 560px at 110% 115%,rgba(90,79,212,.16),transparent 62%),var(--bg);color:var(--tx);font-family:"Space Mono",ui-monospace,monospace;overflow-x:hidden;min-height:100vh;display:flex;justify-content:center;padding:14px 16px}
+#net{position:fixed;inset:0;z-index:0;pointer-events:none}
+#conf{position:fixed;inset:0;width:100%;height:100%;z-index:60;pointer-events:none}
+.app{position:relative;z-index:2;width:100%;max-width:420px;display:flex;flex-direction:column;min-height:calc(100vh - 28px)}
+/* ===== MARCA EN TIPOGRAFÍA NORMAL ===== */
+.marca{position:relative;display:flex;align-items:center;justify-content:center;gap:11px;padding-bottom:7px;margin:4px 0 16px}
+.marca::after{content:"";position:absolute;left:0;bottom:0;height:2px;width:100%;border-radius:2px;
+  background:linear-gradient(90deg,transparent,var(--acc) 35%,#fff 50%,var(--acc) 65%,transparent);
+  background-size:220% 100%;animation:marcaLinea 5s linear infinite}
+@keyframes marcaLinea{to{background-position:-220% 0}}
+.marca-j{font:400 34px "Bebas Neue",Impact,sans-serif;letter-spacing:.14em;line-height:.8;
+  background:linear-gradient(100deg,#fff 20%,var(--acc) 42%,#fff 64%);background-size:220% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:marcaBrillo 6s linear infinite;filter:drop-shadow(0 0 16px rgba(139,124,255,.4))}
+@keyframes marcaBrillo{to{background-position:-220% 0}}
+.marca-x{font:400 21px "Bebas Neue",Impact,sans-serif;line-height:.8;color:var(--acc);
+  text-shadow:0 0 16px rgba(139,124,255,.9);animation:marcaX 3.4s ease-in-out infinite}
+@keyframes marcaX{0%,100%{transform:rotate(0) scale(1);opacity:.8}50%{transform:rotate(90deg) scale(1.22);opacity:1}}
+.marca-i{font:700 20px -apple-system,"Segoe UI",Helvetica,Arial,sans-serif;letter-spacing:-.4px;
+  line-height:.8;color:var(--tx);text-shadow:0 0 18px rgba(255,255,255,.25)}
+.scr{display:none;flex-direction:column;flex:1}
+.scr.on{display:flex;animation:in .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes in{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+/* ===== TÍTULOS: un solo color, violeta, con resplandor ===== */
+.h{font-family:"Bebas Neue",Impact,sans-serif;font-weight:400;font-size:38px;line-height:1;letter-spacing:.03em;margin:4px 0 8px;color:var(--acc);text-shadow:0 0 22px rgba(139,124,255,.45)}
+.glitch{position:relative;display:inline-block;font-family:"Bebas Neue",Impact,sans-serif;font-weight:400;line-height:.95;color:var(--acc);letter-spacing:.02em;text-shadow:0 0 26px rgba(139,124,255,.5)}
+.glitch::before,.glitch::after{content:attr(data-t);position:absolute;left:0;top:0;width:100%;overflow:hidden;pointer-events:none;color:var(--acc)}
+.glitch::before{transform:translate(-3px,0);clip-path:polygon(0 0,100% 0,100% 40%,0 40%);animation:gl1 2.8s infinite steps(2);opacity:.6}
+.glitch::after{transform:translate(3px,0);clip-path:polygon(0 60%,100% 60%,100% 100%,0 100%);animation:gl2 2.8s infinite steps(2);opacity:.6}
+@keyframes gl1{0%,88%,100%{transform:translate(0)}89%{transform:translate(-5px,0)}93%{transform:translate(4px,0)}}
+@keyframes gl2{0%,88%,100%{transform:translate(0)}89%{transform:translate(5px,0)}94%{transform:translate(-3px,0)}}
+.k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+.v{font-size:15px;line-height:1.5;color:var(--tx);margin-top:4px}
+.sub{color:var(--mut);font-size:13px;line-height:1.55;margin:4px 0 14px}
+/* Tarjetas con filo de luz que recorre el borde */
+.card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.card::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;
+  background:linear-gradient(115deg,transparent 38%,rgba(139,124,255,.9) 50%,transparent 62%);background-size:300% 100%;
+  animation:borde 6s linear infinite;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+@keyframes borde{from{background-position:160% 0}to{background-position:-160% 0}}
+.dato{padding:12px 0;border-bottom:1px solid var(--line)}
+.dato:last-child{border-bottom:0}
+.dato.tarea{border-left:3px solid var(--acc);padding-left:12px;background:rgba(139,124,255,.07);border-radius:0 10px 10px 0;margin-top:4px;animation:pulso 2.6s ease-in-out infinite}
+@keyframes pulso{50%{box-shadow:inset 4px 0 22px rgba(139,124,255,.28)}}
+.tag{display:inline-block;font-size:11px;letter-spacing:.12em;padding:3px 9px;border-radius:5px;color:#fff;margin-right:6px;vertical-align:middle}
+.tag.crit{background:var(--p2)}
+.tag.norm{background:var(--p1)}
+.lbl{display:block;font-size:11px;letter-spacing:.14em;color:var(--mut);text-transform:uppercase;margin:12px 0 6px}
+.nm-in{width:100%;border:1px solid var(--line);background:#0c1026;color:var(--tx);border-radius:10px;padding:13px 14px;font:700 17px "Space Mono";outline:none;text-transform:uppercase;transition:.2s}
+.nm-in:focus{border-color:var(--acc);box-shadow:0 0 18px rgba(139,124,255,.3)}
+.nm-in::placeholder{color:#4b5573;text-transform:none}
+/* ===== BOTONES ===== */
+.btn{position:relative;overflow:hidden;width:100%;border:0;border-radius:12px;padding:15px;font:700 14px "Space Mono";letter-spacing:.14em;text-transform:uppercase;color:#fff;cursor:pointer;margin-top:14px;
+  background:linear-gradient(100deg,var(--acc2),var(--acc),var(--acc2));background-size:220% 100%;
+  animation:fondo 5s linear infinite,halo 2.6s ease-in-out infinite;transition:transform .15s}
+.btn::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-20deg);animation:brillo 2.9s infinite}
+@keyframes fondo{to{background-position:-220% 0}}
+@keyframes halo{0%,100%{box-shadow:0 8px 20px rgba(90,79,212,.3)}50%{box-shadow:0 8px 34px rgba(139,124,255,.65)}}
+@keyframes brillo{0%{left:-60%}58%,100%{left:135%}}
+.btn:hover{transform:translateY(-2px)}
+.btn:active{transform:scale(.97)}
+.btn:disabled{background:#1d2342;animation:none;box-shadow:none;color:#6a7299;transform:none}
+.btn:disabled::after{display:none}
+.flecha{display:inline-block;margin-left:6px;animation:flecha 1s ease-in-out infinite}
+@keyframes flecha{50%{transform:translateX(5px)}}
+.error{color:#e8a0a8;min-height:20px;font-size:13px;text-align:center;margin:10px 0 0}
+/* Técnicos en espera: nombres inclinados en el color de cada uno */
+.jugadores{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;padding:12px 0 6px}
+.chip{font:700 15px "Space Mono";color:#fff;padding:9px 16px;border-radius:7px;box-shadow:0 8px 20px rgba(0,0,0,.35);animation:chipIn .5s cubic-bezier(.2,1.6,.4,1)}
+.chip:nth-child(odd){background:var(--p1);transform:rotate(-3deg)}
+.chip:nth-child(even){background:var(--p2);transform:rotate(2.5deg)}
+@keyframes chipIn{from{opacity:0;transform:scale(.5)}}
+.dots{display:flex;justify-content:center;gap:10px;margin:18px 0}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--acc);animation:parp 1.2s infinite}
+.dots i:nth-child(2){animation-delay:.2s}.dots i:nth-child(3){animation-delay:.4s}
+@keyframes parp{50%{transform:scale(1.7);opacity:.35}}
+.ticketrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.ringwrap{width:110px;height:110px;margin:0 auto 6px;position:relative}
+.ringwrap svg{transform:rotate(-90deg)}
+#dArc{filter:drop-shadow(0 0 7px rgba(139,124,255,.9))}
+.ringwrap .num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ringwrap b{font:400 44px "Bebas Neue",Impact,sans-serif;line-height:1}
+.ringwrap small{font-size:9px;letter-spacing:.16em;color:var(--mut)}
+.ringwrap.hot b{color:var(--p2);animation:beat .7s infinite}
+.ringwrap.hot #dArc{stroke:var(--p2)}
+@keyframes beat{50%{transform:scale(1.12)}}
+table{width:100%;border-collapse:separate;border-spacing:0 5px;font-size:12px}
+th{color:var(--mut);font-size:10px;letter-spacing:.1em;text-transform:uppercase;text-align:left;padding:0 8px;font-weight:400}
+td{padding:8px;background:rgba(255,255,255,.04)}
+td:first-child{border-radius:7px 0 0 7px;font-weight:700}td:last-child{border-radius:0 7px 7px 0}
+tbody tr{animation:filaIn .45s backwards}
+@keyframes filaIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+.corona{display:inline-block;margin-left:4px}
+.opts{display:grid;gap:8px;margin:6px 0 4px}
+.opt{display:flex;align-items:center;gap:12px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--tx);border-radius:10px;padding:12px 14px;font:700 15px "Space Mono";cursor:pointer;text-align:left;transition:transform .15s,border-color .15s,background .15s}
+.opt:hover{transform:translateX(4px);border-color:var(--acc)}
+.opt .dot{width:13px;height:13px;border:1.5px solid var(--mut);border-radius:50%;flex:none;transition:.2s}
+.opt.sel{border-color:var(--acc);background:rgba(139,124,255,.18);animation:selp 1.8s infinite}
+@keyframes selp{50%{box-shadow:0 0 20px rgba(139,124,255,.45)}}
+.opt.sel .dot{background:var(--acc);border-color:var(--acc);box-shadow:0 0 12px var(--acc)}
+.check{width:64px;height:64px;margin:10px auto;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;box-shadow:0 0 34px rgba(139,124,255,.5);animation:pop .6s cubic-bezier(.2,1.6,.4,1)}
+.check::after{content:"";width:19px;height:10px;border-left:3px solid #fff;border-bottom:3px solid #fff;transform:rotate(-45deg) translate(2px,-2px)}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+.emoji{position:relative;font-size:104px;line-height:1.1;text-align:center;margin:4px auto 0;display:block;width:max-content}
+.em-gana{animation:bailar .6s ease-in-out infinite}
+@keyframes bailar{0%,100%{transform:translateX(-12px) rotate(-12deg)}50%{transform:translateX(12px) rotate(12deg)}}
+.em-pierde{animation:hundir 2.2s ease-out forwards}
+@keyframes hundir{from{transform:none;filter:none}to{transform:translateY(16px) rotate(-8deg) scale(.92);filter:saturate(.35) brightness(.7)}}
+.em-pierde::after{content:"💧";position:absolute;left:60%;top:40%;font-size:28px;animation:lagrimaE 1.3s infinite}
+@keyframes lagrimaE{0%{transform:translateY(0);opacity:0}20%{opacity:1}100%{transform:translateY(60px);opacity:0}}
+.em-empate{animation:tiembla .35s infinite}
+@keyframes tiembla{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.res-title{font:400 42px/1 "Bebas Neue",Impact,sans-serif;text-align:center;margin:8px 0 14px;color:var(--acc);text-shadow:0 0 26px rgba(139,124,255,.5)}
+.fila{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:9px 0;border-bottom:1px solid var(--line)}
+.fila:last-child{border-bottom:0}
+.fila span:last-child{color:var(--mut);text-align:right}
+.boleto{position:relative;overflow:hidden;border-radius:12px;padding:20px;background:linear-gradient(120deg,#f5c451,#e9a92f,#fde68a);color:#2a1a02;text-align:center;margin-bottom:14px;
+  animation:boletoEntra .9s cubic-bezier(.2,1.6,.4,1) backwards,boletoFlota 3.4s ease-in-out 1s infinite,boletoHalo 2.2s ease-in-out 1s infinite}
+@keyframes boletoEntra{0%{transform:scale(.3) rotate(-18deg);opacity:0}60%{transform:scale(1.12) rotate(4deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+@keyframes boletoFlota{0%,100%{transform:translateY(0) rotate(-1.2deg)}50%{transform:translateY(-11px) rotate(1.2deg)}}
+@keyframes boletoHalo{0%,100%{box-shadow:0 14px 38px rgba(245,196,81,.35)}50%{box-shadow:0 20px 72px rgba(245,196,81,.9)}}
+@keyframes numPulso{50%{transform:scale(1.06);text-shadow:0 0 24px rgba(255,255,255,.95)}}
+
+.boleto::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.75),transparent);transform:skewX(-20deg);animation:brillo 3s infinite}
+.boleto b{display:block;font:400 60px "Bebas Neue",Impact,sans-serif;letter-spacing:.06em;line-height:1;animation:numPulso 1.8s ease-in-out infinite}
+.oculto{display:none!important}
+#cd{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,10,26,.94);backdrop-filter:blur(6px)}
+#cd.on{display:flex}
+#cdN{font:400 200px "Bebas Neue",Impact,sans-serif;color:var(--acc);text-shadow:0 0 56px rgba(139,124,255,.7);animation:cdp .9s ease-out;line-height:1}
+#cd small{font-size:12px;letter-spacing:.24em;color:var(--mut);text-transform:uppercase;margin-top:8px}
+@keyframes cdp{0%{transform:scale(2.6);opacity:0}35%{transform:scale(1);opacity:1}100%{transform:scale(.88);opacity:.5}}
+</style></head>
+<body>
+<canvas id="net"></canvas>
+<canvas id="conf"></canvas>
+<div id="cd"><div id="cdN">3</div><small>Preparen el ticket</small></div>
+
+<div class="app">
+  <div class="marca"><span class="marca-j">JEDEST</span><span class="marca-x">×</span><span class="marca-i">IntouchCX</span></div>
+
+  <section class="scr on" id="sFormulario">
+    <div class="glitch" data-t="Duelo de ticket" style="font-size:72px;margin-top:6px">Duelo de ticket</div>
+    <p class="sub">Dos técnicos, un ticket, 60 segundos. Gana quien asigna bien; si ambos aciertan, gana el más rápido.</p>
+    <div class="card">
+      <label class="lbl" for="codigo">Código de la sala</label>
+      <input id="codigo" class="nm-in" maxlength="4" placeholder="ABCD" autocomplete="off">
+      <label class="lbl" for="nombre">Tu nombre</label>
+      <input id="nombre" class="nm-in" maxlength="12" placeholder="Tu nombre" autocomplete="off" style="text-transform:none;font-size:16px">
+      <button class="btn" id="unir">Entrar a la sala</button>
+      <p class="error" id="error"></p>
+    </div>
+  </section>
+
+  <section class="scr" id="sEspera">
+    <div class="h">Sala lista</div>
+    <p class="sub">El anfitrión tiene el control. Cuando inicie, empieza la cuenta regresiva.</p>
+    <div class="card"><div class="k">Técnicos conectados</div><div class="jugadores" id="eJugadores"></div></div>
+    <div class="dots"><i></i><i></i><i></i></div>
+  </section>
+
+  <section class="scr" id="sDuelo">
+    <div class="ticketrow"><span class="k" id="dRonda"></span><span class="k" id="dTicket"></span></div>
+    <div class="glitch" id="dTitulo" data-t="" style="font-size:44px;margin:10px 0 4px">—</div>
+
+    <div class="dato"><div class="k">Prioridad</div><div class="v" id="dPrioridad"></div></div>
+    <div class="dato"><div class="k">Motivo</div><div class="v" id="dMotivo"></div></div>
+    <div class="dato tarea"><div class="k">Tu tarea</div><div class="v"><b>Asigna este ticket a un técnico</b> de la tabla.</div></div>
+
+    <div class="card" style="margin-top:12px;padding:12px">
+      <div class="ringwrap" id="dRing">
+        <svg width="110" height="110"><circle cx="55" cy="55" r="47" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="7"/>
+        <circle id="dArc" cx="55" cy="55" r="47" fill="none" stroke="#8b7cff" stroke-width="7" stroke-linecap="round" stroke-dasharray="295" stroke-dashoffset="0"/></svg>
+        <div class="num"><b id="dSecs">60</b><small>SEG</small></div>
+      </div>
+      <div class="k" style="margin:6px 0 4px">Técnicos disponibles</div>
+      <table><thead><tr><th>Técnico</th><th>Senior</th><th>Carga</th><th>Turno</th></tr></thead><tbody id="dTabla"></tbody></table>
+      <div class="k" style="margin:10px 0 0">Regla</div>
+      <div class="v" style="font-size:12px;color:var(--mut)" id="dRegla"></div>
+    </div>
+
+    <div class="k" style="margin:10px 0 0">Tu asignación</div>
+    <div class="opts" id="dOpts"></div>
+    <button class="btn" id="dGuardar" disabled>Bloquear asignación <span class="flecha">▶</span></button>
+    <p class="sub" style="text-align:center;font-size:11px;margin:8px 0 0">Puedes cambiarla hasta bloquearla.</p>
+  </section>
+
+  <section class="scr" id="sEsperaRival">
+    <div class="h" style="text-align:center">Asignación bloqueada</div>
+    <div class="check"></div>
+    <div class="glitch" data-t="Esperando rival" style="font-size:50px;display:block;text-align:center">Esperando rival</div>
+    <div class="card" style="margin-top:16px"><div class="k">Tu asignación</div><div class="v" style="font-size:17px;font-weight:700" id="wMia">—</div></div>
+    <p class="sub" id="wEstado" style="text-align:center"></p>
+    <div class="dots"><i></i><i></i><i></i></div>
+  </section>
+
+  <section class="scr" id="sResultado">
+    <div class="k" style="text-align:center" id="rRonda"></div>
+    <span class="emoji" id="rEmoji"></span>
+    <div class="res-title" id="rTitulo"></div>
+    <div class="card">
+      <div class="fila"><span>Tu asignación</span><span id="rTuya">—</span></div>
+      <div class="fila"><span>Rival</span><span id="rRival">—</span></div>
+      <div class="fila"><span>Correcta</span><span id="rCorrecta" style="color:var(--acc)">—</span></div>
+      <p class="v" id="rExpl" style="margin:12px 0 0;font-size:13px;color:var(--mut)"></p>
+    </div>
+    <p class="sub" id="rMarcador" style="text-align:center;color:var(--tx)"></p>
+    <p class="sub" id="rSiguiente" style="text-align:center;color:var(--accl)"></p>
+  </section>
+
+  <section class="scr" id="sFinal">
+    <span class="emoji" id="fEmoji"></span>
+    <div class="res-title" id="fTitulo"></div>
+    <div class="boleto oculto" id="fBoleto"><div class="k" style="color:#5a3d07">Boleto dorado · rifa</div><b id="fNum"></b><div style="font-size:11px">Guárdalo: se sortea al final de la feria</div></div>
+    <div class="card oculto" id="fConsuelo"><p class="v" style="margin:0;text-align:center">Gracias por jugar. Pasa a recoger tu premio de consolación.</p></div>
+    <p class="sub" id="fMarcador" style="text-align:center;color:var(--tx)"></p>
+  </section>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+const $ = s => document.querySelector(s);
+const LETRAS = 'ABCD';
+const SECCIONES = ['sFormulario', 'sEspera', 'sDuelo', 'sEsperaRival', 'sResultado', 'sFinal'];
+
+function mostrar(id) { SECCIONES.forEach(s => $('#' + s).classList.toggle('on', s === id)); }
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const store = {
+  get() { try { return JSON.parse(sessionStorage.getItem('jedest_jugador')); } catch (e) { return null; } },
+  set(v) { try { sessionStorage.setItem('jedest_jugador', JSON.stringify(v)); } catch (e) {} },
+  clear() { try { sessionStorage.removeItem('jedest_jugador'); } catch (e) {} }
+};
+const token = (() => {
+  try {
+    let t = sessionStorage.getItem('jedest_token');
+    if (!t) { t = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('jedest_token', t); }
+    return t;
+  } catch (e) { return Math.random().toString(36).slice(2); }
+})();
+
+let offset = 0, countdownEnd = 0, roundEnd = 0, loop = null;
+let mySlot = null, respondi = false, opcionElegida = null, roundTecnicos = [], ultimoCd = null;
+
+function entrar(code, name, silencioso) {
+  socket.emit('player:join', { code, name, token }, res => {
+    if (!res || !res.ok) {
+      if (!silencioso) $('#error').textContent = res ? res.error : 'Sin conexión.';
+      store.clear(); mySlot = null;
+      mostrar('sFormulario');
+      return;
+    }
+    mySlot = res.slot;
+    $('#error').textContent = '';
+    store.set({ code, name: res.name });
+    if (!res.started) mostrar('sEspera');
+  });
+}
+
+$('#unir').onclick = () => {
+  const code = $('#codigo').value.trim().toUpperCase();
+  const name = $('#nombre').value.trim();
+  if (code.length !== 4) { $('#error').textContent = 'El código tiene 4 caracteres.'; return; }
+  entrar(code, name, false);
+};
+
+socket.on('connect', () => {
+  const s = store.get();
+  if (s && s.code) {
+    $('#codigo').value = s.code;
+    $('#nombre').value = s.name;
+    entrar(s.code, s.name, true);
+  }
+});
+
+socket.on('room:update', d => {
+  $('#eJugadores').innerHTML = d.players.map(p => `<span class="chip">${esc(p.name)}</span>`).join('') +
+    (d.players.length < 2 ? '<p class="sub" style="width:100%;text-align:center;margin:6px 0 0">Esperando al otro técnico...</p>' : '');
+});
+
+socket.on('player:ack', d => {
+  respondi = !!d.answered;
+  if (d.answered && roundTecnicos[d.option]) $('#wMia').textContent = `${LETRAS[d.option]}. ${roundTecnicos[d.option].nombre}`;
+});
+
+socket.on('room:answers', d => {
+  $('#wEstado').textContent = d.count >= d.total ? 'Los dos bloquearon.' : `${d.count} de ${d.total} bloqueó`;
+});
+
+function setCd(v) {
+  if (String(v) === ultimoCd) return;
+  ultimoCd = String(v);
+  const e = $('#cdN');
+  e.textContent = v;
+  e.style.animation = 'none';
+  void e.offsetWidth;
+  e.style.animation = '';
+  if (navigator.vibrate) navigator.vibrate(40);
+}
+
+socket.on('round:start', d => {
+  offset = d.serverNow - Date.now();
+  countdownEnd = d.countdownEnd;
+  roundEnd = d.roundEnd;
+  respondi = false;
+  opcionElegida = null;
+  ultimoCd = null;
+  roundTecnicos = d.escenario.tecnicos;
+
+  const critico = d.escenario.tipo === 'CRÍTICO';
+  $('#dRonda').textContent = d.desempate ? 'Ronda de desempate' : `Ronda ${d.round} de ${d.totalRounds}`;
+  $('#dTicket').textContent = `Ticket ${d.escenario.ticket}`;
+  $('#dTitulo').textContent = d.escenario.titulo;
+  $('#dTitulo').dataset.t = d.escenario.titulo;
+  $('#dPrioridad').innerHTML = `<span class="tag ${critico ? 'crit' : 'norm'}">${critico ? 'Crítica' : 'Normal'}</span>${critico ? 'Solo un técnico senior puede atenderlo.' : 'Cualquier técnico puede atenderlo.'}`;
+  $('#dMotivo').textContent = d.escenario.motivo;
+  $('#dRegla').textContent = (critico ? 'Prioridad crítica: solo senior. ' : 'Prioridad normal: todos participan. ') + 'Gana quien tenga menor carga; si empatan, el menor turno.' + (d.desempate ? ' En el desempate el tiempo decide: contesta bien y rápido.' : '');
+  $('#dTabla').innerHTML = d.escenario.tecnicos.map((t, i) =>
+    `<tr style="animation-delay:${i * 70}ms"><td>${esc(t.nombre)}${t.senior ? '<span class="corona">👑</span>' : ''}</td><td>${t.senior ? 'Sí' : 'No'}</td><td>${t.carga}</td><td>${t.turno}</td></tr>`).join('');
+  $('#dOpts').innerHTML = d.escenario.tecnicos.map((t, i) =>
+    `<button class="opt" data-i="${i}"><span class="dot"></span><span>${LETRAS[i]}. ${esc(t.nombre)}</span></button>`).join('');
+  document.querySelectorAll('#dOpts .opt').forEach(b => b.onclick = () => elegir(Number(b.dataset.i)));
+  $('#dGuardar').disabled = true;
+
+  clearInterval(loop);
+  loop = setInterval(pintar, 100);
+  pintar();
+});
+
+function elegir(i) {
+  if (respondi) return;
+  opcionElegida = i;
+  document.querySelectorAll('#dOpts .opt').forEach((b, k) => b.classList.toggle('sel', k === i));
+  socket.emit('player:pick', { option: i });
+}
+
+$('#dGuardar').onclick = () => {
+  if (respondi || opcionElegida === null) return;
+  respondi = true;
+  socket.emit('player:answer', { option: opcionElegida });
+  $('#wMia').textContent = `${LETRAS[opcionElegida]}. ${roundTecnicos[opcionElegida].nombre}`;
+  $('#wEstado').textContent = '';
+  mostrar('sEsperaRival');
+};
+
+function pintar() {
+  const ahora = Date.now() + offset;
+  if (ahora < countdownEnd) {
+    setCd(Math.ceil((countdownEnd - ahora) / 1000));
+    $('#cd').classList.add('on');
+    mostrar('sDuelo');
+    return;
+  }
+  $('#cd').classList.remove('on');
+  mostrar(respondi ? 'sEsperaRival' : 'sDuelo');
+
+  const restante = Math.max(0, Math.ceil((roundEnd - ahora) / 1000));
+  $('#dSecs').textContent = restante;
+  $('#dArc').setAttribute('stroke-dashoffset', (295 * (1 - restante / 60)).toFixed(1));
+  $('#dRing').classList.toggle('hot', restante <= 10);
+  $('#dGuardar').disabled = opcionElegida === null || respondi;
+}
+
+socket.on('round:result', d => {
+  clearInterval(loop);
+  $('#cd').classList.remove('on');
+  const yo = d.resultados.find(r => r.key === mySlot);
+  const rv = d.resultados.find(r => r.key !== mySlot);
+  const gane = d.ganadorKey !== null && d.ganadorKey === mySlot;
+  const t = d.escenario.tecnicos;
+
+  $('#rRonda').textContent = d.desempate ? 'Resultado · ronda de desempate' : `Resultado · ronda ${d.round} de ${d.totalRounds}`;
+  const em = $('#rEmoji');
+  em.textContent = yo ? yo.emoji : '😐';
+  em.className = 'emoji ' + (gane ? 'em-gana' : (d.ganadorKey === null ? 'em-empate' : 'em-pierde'));
+  if (!yo || yo.option === null) $('#rTitulo').textContent = 'No bloqueaste a tiempo';
+  else if (gane) $('#rTitulo').textContent = '¡Ganaste la ronda!';
+  else if (d.ganadorKey === null) $('#rTitulo').textContent = 'Empate en la ronda';
+  else $('#rTitulo').textContent = 'Perdiste la ronda';
+
+  $('#rTuya').textContent = yo && yo.option !== null ? t[yo.option].nombre : 'Sin respuesta';
+  $('#rRival').textContent = rv && rv.option !== null ? t[rv.option].nombre : 'Sin respuesta';
+  $('#rCorrecta').textContent = t[d.correcta].nombre;
+  $('#rExpl').textContent = d.explicacion;
+  $('#rMarcador').textContent = 'Marcador: ' + d.marcador.map(m => `${m.name} ${m.wins}`).join(' · ');
+  $('#rSiguiente').textContent = d.fin ? 'Esperando el resultado final...'
+    : (d.siguienteDesempate ? 'Siguen empatados: viene una ronda de desempate.'
+                            : 'Esperando a que el anfitrión lance la siguiente ronda...');
+  mostrar('sResultado');
+});
+
+socket.on('game:over', d => {
+  clearInterval(loop);
+  $('#cd').classList.remove('on');
+  const gane = d.ganadorKey !== null && d.ganadorKey === mySlot;
+  const empate = d.ganadorKey === null;
+
+  const em = $('#fEmoji');
+  em.textContent = gane ? '😎' : (empate ? '😐' : '😢');
+  em.className = 'emoji ' + (gane ? 'em-gana' : (empate ? 'em-empate' : 'em-pierde'));
+  $('#fTitulo').textContent = gane ? '¡Ganaste el duelo!' : (empate ? 'Empate en el duelo' : 'Buen duelo, técnico');
+  $('#fBoleto').classList.toggle('oculto', !gane);
+  if (gane) $('#fNum').textContent = '#' + String(d.boleto).padStart(4, '0');
+  $('#fConsuelo').classList.toggle('oculto', gane);
+  $('#fMarcador').textContent = 'Marcador final: ' + d.marcador.map(m => `${m.name} ${m.wins}`).join(' · ');
+  mostrar('sFinal');
+  if (gane) lanzarConfeti($('#conf'));
+});
+
+socket.on('room:closed', () => {
+  store.clear();
+  alert('La sala se cerró.');
+  location.reload();
+});
+
+let confetiCorriendo = false;
+// Confeti sin fin: cada pieza que sale por abajo vuelve a nacer arriba
+function lanzarConfeti(canvas) {
+  if (confetiCorriendo) return;
+  confetiCorriendo = true;
+  const x = canvas.getContext("2d");
+  const medir = () => { canvas.width = innerWidth; canvas.height = innerHeight; };
+  medir();
+  addEventListener("resize", medir);
+  const cols = ["#8b7cff","#b9b2ff","#5a4fd4","#5672b8","#f5c451"];
+  const nuevo = () => ({
+    x: Math.random() * canvas.width, y: -30 - Math.random() * canvas.height,
+    vx: (Math.random() - .5) * 3.4, vy: 1.5 + Math.random() * 2.2, g: .035,
+    vmax: 4.5 + Math.random() * 2.5,
+    r: Math.random() * 6, vr: (Math.random() - .5) * .22,
+    sw: Math.random() * 6.28, sa: .4 + Math.random() * .9,
+    s: 8 + Math.random() * 8, c: cols[Math.floor(Math.random() * cols.length)]
+  });
+  const P = Array.from({ length: 180 }, nuevo);
+  (function step() {
+    x.clearRect(0, 0, canvas.width, canvas.height);
+    P.forEach(p => {
+      p.vy = Math.min(p.vy + p.g, p.vmax);
+      p.sw += .03;
+      p.x += p.vx + Math.sin(p.sw) * p.sa;
+      p.y += p.vy;
+      p.r += p.vr;
+      if (p.y > canvas.height + 40) { Object.assign(p, nuevo()); p.y = -30; }
+      if (p.x < -40) p.x = canvas.width + 30;
+      if (p.x > canvas.width + 40) p.x = -30;
+      x.save(); x.translate(p.x, p.y); x.rotate(p.r); x.fillStyle = p.c;
+      x.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); x.restore();
+    });
+    requestAnimationFrame(step);
+  })();
+}
+
+const cv = $('#net'), cx = cv.getContext('2d');
+let W, H, pts = [];
+function rs() {
+  W = cv.width = innerWidth; H = cv.height = innerHeight;
+  pts = Array.from({ length: Math.min(110, Math.floor(W * H / 14000)) }, () => ({
+    x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35,
+    r: Math.random() * 2 + .8, c: Math.random() < .5 ? '139,124,255' : '185,178,255'
+  }));
+}
+function draw() {
+  cx.clearRect(0, 0, W, H);
+  pts.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0 || p.x > W) p.vx *= -1;
+    if (p.y < 0 || p.y > H) p.vy *= -1;
+  });
+  for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+    const a = pts[i], b = pts[j], d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (d < 160) { cx.strokeStyle = `rgba(150,140,255,${(1 - d / 160) * .13})`; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(a.x, a.y); cx.lineTo(b.x, b.y); cx.stroke(); }
+  }
+  pts.forEach(p => { cx.fillStyle = `rgba(${p.c},.5)`; cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 7); cx.fill(); });
+  requestAnimationFrame(draw);
+}
+rs(); addEventListener('resize', rs); draw();
+</script>
+</body></html>
