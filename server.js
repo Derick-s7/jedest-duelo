@@ -56,16 +56,21 @@ const BASE = [
 // Ronda normal: acertar manda; si ambos aciertan, el más rápido. Si no, empate.
 // Desempate: el tiempo decide siempre, para que salga un ganador sí o sí.
 function decidirGanador(res, esDesempate) {
-  if (res.length !== 2) return null;
+  const nada = { key: null, razon: 'empate' };
+  if (res.length !== 2) return nada;
   const [x, y] = res;
-  if (x.correct && !y.correct) return x.key;
-  if (y.correct && !x.correct) return y.key;
-  if (x.correct && y.correct) return x.ms !== y.ms ? (x.ms < y.ms ? x.key : y.key) : null;
-  if (!esDesempate) return null;
-  if (x.ms === null && y.ms === null) return null;
-  if (x.ms === null) return y.key;
-  if (y.ms === null) return x.key;
-  return x.ms !== y.ms ? (x.ms < y.ms ? x.key : y.key) : null;
+  if (x.correct && !y.correct) return { key: x.key, razon: 'unico' };
+  if (y.correct && !x.correct) return { key: y.key, razon: 'unico' };
+  if (x.correct && y.correct) {
+    if (x.ms === y.ms) return nada;
+    return { key: x.ms < y.ms ? x.key : y.key, razon: 'rapidez' };
+  }
+  if (!esDesempate) return { key: null, razon: 'ambos-mal' };
+  if (x.ms === null && y.ms === null) return nada;
+  if (x.ms === null) return { key: y.key, razon: 'solo-uno' };
+  if (y.ms === null) return { key: x.key, razon: 'solo-uno' };
+  if (x.ms === y.ms) return nada;
+  return { key: x.ms < y.ms ? x.key : y.key, razon: 'rapidez' };
 }
 
 function respuestaCorrecta(e) {
@@ -127,6 +132,7 @@ function startRound(room) {
   room.answers = {};
   room.picks = {};
   room.open = true;
+  room.locked = false;
   room.waitingNext = false;
 
   const now = Date.now();
@@ -148,13 +154,30 @@ function startRound(room) {
   io.to(room.hostId).emit('room:picks', room.picks);
 
   clearTimeout(room.timer);
-  room.timer = setTimeout(() => finishRound(room), room.roundEnd - now);
+  room.timer = setTimeout(() => lockRound(room), room.roundEnd - now);
+}
+
+// Cierra las respuestas y detiene el reloj, pero NO revela nada todavia.
+// El anfitrion aprovecha esta pausa para interactuar con el publico.
+function lockRound(room) {
+  if (!room.open) return;
+  room.open = false;
+  room.locked = true;
+  clearTimeout(room.timer);
+
+  emitRoom(room, 'round:locked', {
+    round: room.round,
+    totalRounds: room.totalRounds,
+    desempate: room.round > MAX_ROUNDS,
+    respondieron: Object.keys(room.answers).map(Number),
+    total: room.players.length,
+    nombres: room.players.map(p => ({ key: p.slot, name: p.name }))
+  });
 }
 
 function finishRound(room) {
-  if (!room.open) return;
-  room.open = false;
-  clearTimeout(room.timer);
+  if (!room.locked) return;
+  room.locked = false;
 
   const e = room.current;
   const res = room.players.map(p => {
@@ -163,7 +186,11 @@ function finishRound(room) {
   });
 
   const esDesempate = room.round > MAX_ROUNDS;
-  const ganadorKey = decidirGanador(res, esDesempate);
+  const fallo = decidirGanador(res, esDesempate);
+  const ganadorKey = fallo.key;
+  const razon = fallo.razon;
+  const conTiempo = res.filter(r => r.ms !== null);
+  const diferenciaMs = conTiempo.length === 2 ? Math.abs(conTiempo[0].ms - conTiempo[1].ms) : null;
   if (ganadorKey !== null) room.wins[ganadorKey] = (room.wins[ganadorKey] || 0) + 1;
   res.forEach(r => {
     r.ganador = r.key === ganadorKey;
@@ -205,6 +232,8 @@ function finishRound(room) {
     resultados: res,
     ganadorKey,
     ganadorNombre,
+    razon,
+    diferenciaMs,
     marcador: marcador(room),
     historial: room.history,
     fin
@@ -244,7 +273,7 @@ io.on('connection', (socket) => {
       players: [], started: false, timer: null, last: null,
       round: 0, wins: {}, history: [], batallas: [],
       totalRounds: MAX_ROUNDS, pool: [],
-      open: false, answers: {}, picks: {}, current: null, escenarios: [],
+      open: false, locked: false, answers: {}, picks: {}, current: null, escenarios: [],
       countdownEnd: 0, roundEnd: 0, waitingNext: false, fin: false, over: false
     };
     rooms.set(code, room);
@@ -311,6 +340,13 @@ io.on('connection', (socket) => {
     startRound(room);
   });
 
+  // El anfitrion decide cuando se revela la respuesta
+  socket.on('host:reveal', () => {
+    const room = rooms.get(socket.data.code);
+    if (!room || room.hostId !== socket.id || !room.locked) return;
+    finishRound(room);
+  });
+
   socket.on('host:finish', () => {
     const room = rooms.get(socket.data.code);
     if (!room || room.hostId !== socket.id || !room.fin || room.over) return;
@@ -344,7 +380,7 @@ io.on('connection', (socket) => {
     const slots = Object.keys(room.answers).map(Number);
     io.to(room.code).emit('room:answers', { count: slots.length, total: room.players.length, slots });
     io.to(room.hostId).emit('room:picks', room.picks);
-    if (slots.length >= room.players.length) finishRound(room);
+    if (slots.length >= room.players.length) lockRound(room);
   });
 
   socket.on('host:close', () => {
